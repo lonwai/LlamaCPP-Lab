@@ -3,10 +3,12 @@ import { useChatStore } from './store/chatStore';
 import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
 import { Header } from './components/Layout/Header';
+import { MessageBubble } from './components/Chat/MessageBubble';
 import './App.css';
 
 function App() {
   const [input, setInput] = useState('');
+  const [enableReasoning, setEnableReasoning] = useState(false);
   const { messages } = useChatStore();
   const { sendMessage, error, isSending } = useChatStream();
 
@@ -14,7 +16,7 @@ function App() {
     e.preventDefault();
     if (!input.trim() || isSending) return;
     
-    await sendMessage(input);
+    await sendMessage(input, enableReasoning);
     setInput('');
   };
 
@@ -31,32 +33,46 @@ function App() {
                 开始与本地模型对话吧！
               </div>
             ) : (
-              messages.map((msg) => (
-                <div
+              messages.map((msg, index) => (
+                <MessageBubble
                   key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      msg.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                </div>
+                  message={msg}
+                  isLast={index === messages.length - 1}
+                />
               ))
             )}
-            {isSending && (
-              <div className="text-center text-gray-500">思考中...</div>
+            {isSending && !messages.some(m => m.role === 'assistant' && !m.content) && (
+              <div className="text-center text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="animate-pulse">思考中</span>
+                  <span className="flex gap-1">
+                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </span>
+                </div>
+              </div>
             )}
             {error && (
               <div className="text-center text-red-500">{error}</div>
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="border-t p-4">
+          <form onSubmit={handleSubmit} className="border-t p-4 space-y-3">
+            {/* 思考模式开关 */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={enableReasoning}
+                onChange={(e) => setEnableReasoning(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                disabled={isSending}
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                🧠 开启深度思考模式（需要模型支持）
+              </span>
+            </label>
+
             <div className="flex gap-2">
               <input
                 type="text"

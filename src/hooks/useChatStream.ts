@@ -14,7 +14,7 @@ export function useChatStream() {
     settings 
   } = useChatStore();
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, enableReasoning: boolean = false) => {
     setError(null);
     setLoading(true);
 
@@ -37,15 +37,21 @@ export function useChatStream() {
     try {
       const allMessages = [...messages, userMessage];
       let fullContent = '';
+      let fullReasoning = '';
       let hasReceivedAnyChunk = false;
 
-      for await (const chunk of chatCompletionStream(allMessages, settings)) {
-        // 收到即渲染：只要有内容就立即追加
+      for await (const chunk of chatCompletionStream(allMessages, settings, enableReasoning)) {
+        // 收到即渲染：分开累加 reasoning_content 和 content
         if (chunk.content || chunk.reasoning_content) {
           hasReceivedAnyChunk = true;
-          if (chunk.content) fullContent += chunk.content;
-          if (chunk.reasoning_content) fullContent += chunk.reasoning_content;
-          updateLastMessage(fullContent);
+          if (chunk.reasoning_content) {
+            fullReasoning += chunk.reasoning_content;
+          }
+          if (chunk.content) {
+            fullContent += chunk.content;
+          }
+          // 同时更新 reasoning_content 和 content
+          updateLastMessage(fullContent, fullReasoning);
         }
         if (chunk.metrics) {
           updateMetrics(chunk.metrics);
@@ -54,7 +60,7 @@ export function useChatStream() {
       
       // 如果没有任何 chunk 但也没有报错，至少显示一个空响应
       if (!hasReceivedAnyChunk) {
-        updateLastMessage('(无响应)');
+        updateLastMessage('(无响应)', '');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '发送失败');

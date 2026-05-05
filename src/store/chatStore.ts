@@ -10,7 +10,7 @@ interface ChatState {
   settings: ChatSettings;
   
   addMessage: (message: Message) => void;
-  updateLastMessage: (content: string) => void;
+  updateLastMessage: (content: string, reasoning?: string) => void;
   setLoading: (loading: boolean) => void;
   updateMetrics: (metrics: ChatMetrics) => void;
   createConversation: () => string;
@@ -41,13 +41,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  updateLastMessage: (content) => {
+  updateLastMessage: (content, reasoning = '') => {
     set((state) => {
       const messages = [...state.messages];
       if (messages.length > 0) {
         messages[messages.length - 1] = {
           ...messages[messages.length - 1],
           content,
+          reasoning_content: reasoning,
         };
       }
       return { messages };

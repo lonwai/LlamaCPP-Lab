@@ -4,7 +4,8 @@ const API_BASE_URL = 'http://127.0.0.1:8080/v1';
 
 export async function* chatCompletionStream(
   messages: Message[],
-  settings: ChatSettings
+  settings: ChatSettings,
+  enableReasoning: boolean = false
 ): AsyncGenerator<{ content?: string; reasoning_content?: string; metrics?: ChatMetrics }> {
   const response = await fetch(`${API_BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -19,6 +20,12 @@ export async function* chatCompletionStream(
       })),
       stream: true,
       ...settings,
+      // 如果启用思考模式，添加相关参数（具体参数名根据模型支持情况调整）
+      ...(enableReasoning && { 
+        extra_body: { 
+          enable_thinking: true 
+        } 
+      }),
     }),
   });
 
