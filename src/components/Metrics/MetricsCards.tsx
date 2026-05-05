@@ -2,6 +2,7 @@ import { useChatStore } from '../../store/chatStore';
 
 export function MetricsCards() {
   const metrics = useChatStore(state => state.metrics);
+  const accumulatedTokens = useChatStore(state => state.accumulatedTokens); // 获取累加后的 Token 数
 
   if (!metrics) return null;
 
@@ -23,19 +24,19 @@ export function MetricsCards() {
         </span>
       </div>
 
-      {/* 总 Token 数 */}
+      {/* 总 Token 数（累加值） */}
       <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded shadow-sm border border-gray-100 dark:border-gray-600">
-        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">总 Token 数</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">上下文 Token (累计)</span>
         <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
-          {metrics.totalTokens || 0}
+          {accumulatedTokens > 0 ? accumulatedTokens : (metrics.totalTokens || 0)}
         </span>
       </div>
 
-      {/* 上下文 Token */}
+      {/* 当前轮次详情 */}
       <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded shadow-sm border border-gray-100 dark:border-gray-600">
-        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">上下文 Token</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">本轮生成</span>
         <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
-          {(metrics.promptTokens || 0) + (metrics.completionTokens || 0)}
+          {metrics.completionTokens || 0}
         </span>
       </div>
     </div>

@@ -66,9 +66,9 @@ export function useChatStream() {
         }
       }
       
-      // 【关键修复】流结束后，强制用最终准确数据刷新一次指标
+      // 【关键修复】流结束后，强制用最终准确数据刷新一次指标（传入 isFinal=true 触发累加）
       if (finalMetrics) {
-        updateMetrics(finalMetrics);
+        updateMetrics(finalMetrics, true); // 传入 true 标记为最终状态，触发 Token 累加
       } else if (!finalMetrics && useChatStore.getState().metrics?.totalTokens === 0) {
         // 兜底：如果完全没拿到 metrics，至少根据长度估算一下
         const estimatedTokens = Math.ceil((fullContent.length + fullReasoning.length) / 4);
@@ -76,7 +76,7 @@ export function useChatStream() {
           totalTokens: estimatedTokens,
           completionTokens: estimatedTokens,
           tokensPerSecond: useChatStore.getState().metrics?.tokensPerSecond || 0
-        });
+        }, true);
       }
 
       // 如果没有任何 chunk 但也没有报错，至少显示一个空响应
