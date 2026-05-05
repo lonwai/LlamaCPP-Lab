@@ -17,6 +17,7 @@ interface ChatState {
   updateMetrics: (metrics: ChatMetrics, isFinal?: boolean) => void; // 新增 isFinal 标记
   createConversation: () => string;
   selectConversation: (id: string) => void;
+  deleteConversation: (id: string) => void;
   saveConversations: () => Promise<void>;
   loadConversations: () => Promise<void>;
   resetAccumulatedTokens: () => void; // 新增：新建对话时重置
@@ -141,8 +142,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({
         currentConversationId: id,
         messages: conversation.messages,
+        metrics: conversation.metrics.length > 0 
+          ? conversation.metrics[conversation.metrics.length - 1] 
+          : null,
       });
     }
+  },
+
+  deleteConversation: (id) => {
+    set((state) => {
+      const filtered = state.conversations.filter(c => c.id !== id);
+      const isCurrent = state.currentConversationId === id;
+      return {
+        conversations: filtered,
+        currentConversationId: isCurrent ? null : state.currentConversationId,
+        messages: isCurrent ? [] : state.messages,
+        metrics: isCurrent ? null : state.metrics,
+        accumulatedTokens: isCurrent ? 0 : state.accumulatedTokens,
+      };
+    });
   },
 
   saveConversations: async () => {

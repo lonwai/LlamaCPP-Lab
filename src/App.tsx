@@ -3,6 +3,7 @@ import { useChatStore } from './store/chatStore';
 import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
 import { Header } from './components/Layout/Header';
+import { ConversationList } from './components/Chat/ConversationList';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -112,7 +113,12 @@ function App() {
       <Header />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* 左侧：对话区域 */}
+        {/* 最左侧：会话列表侧边栏 */}
+        <div className="hidden md:flex">
+          <ConversationList />
+        </div>
+
+        {/* 中间：对话区域 */}
         <main className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-700">
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {messages.length === 0 ? (
@@ -156,25 +162,10 @@ function App() {
         </main>
 
         {/* 右侧：固定指标侧边栏 */}
-        <aside className="hidden md:block w-80 bg-gray-50 dark:bg-gray-800/50 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <aside className="hidden lg:block w-80 bg-gray-50 dark:bg-gray-800/50 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
           <div className="sticky top-0 p-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white">📊 实时性能监控</h3>
             <MetricsCards />
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-              <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 text-sm">🚀 Phase 2 即将上线</h4>
-              <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside">
-                <li>💾 JSON 文件持久化存储</li>
-                <li>📈 Recharts 趋势图表</li>
-                <li>⚙️ 参数预设管理</li>
-                <li>📤 会话导出/导入</li>
-              </ul>
-            </div>
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <p className="text-xs text-yellow-800 dark:text-yellow-300">
-                💡 <strong>当前模式：</strong>Phase 1 (内存级)<br/>
-                数据刷新后清空，Phase 2 将自动保存至 JSON 文件。
-              </p>
-            </div>
           </div>
         </aside>
       </div>
