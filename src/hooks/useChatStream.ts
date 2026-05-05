@@ -6,11 +6,12 @@ import type { Message, ChatMetrics } from '../types';
 
 export function useChatStream() {
   const [error, setError] = useState<string | null>(null);
-  const { 
-    messages, 
-    addMessage, 
-    updateLastMessage, 
-    setLoading, 
+
+  const {
+    messages,
+    addMessage,
+    updateLastMessage,
+    setLoading,
     updateMetrics,
     settings,
     conversations,
@@ -21,24 +22,23 @@ export function useChatStream() {
     loadSettings: loadSettingsFromStore
   } = useChatStore();
 
-  // 组件挂载时加载历史对话和设置
   useEffect(() => {
     loadConversationsFromStore();
     loadSettingsFromStore();
   }, [loadConversationsFromStore, loadSettingsFromStore]);
 
-  // 每次 conversations 变化时自动保存
   useEffect(() => {
     if (conversations.length > 0) {
       saveConversationsToStore();
     }
   }, [conversations, saveConversationsToStore]);
 
+  const isSending = useChatStore(state => state.isLoading);
+
   const sendMessage = useCallback(async (content: string, enableReasoning: boolean = false) => {
     setError(null);
     setLoading(true);
 
-    // 如果没有当前对话，则创建一个新对话
     let conversationId = currentConversationId;
     if (!conversationId) {
       conversationId = createConversation();
@@ -62,38 +62,29 @@ export function useChatStream() {
     addMessage(assistantMessage);
 
     try {
-      const allMessages = [...messages, userMessage];
+      const currentMessages = [...messages, userMessage];
+
       let fullContent = '';
       let fullReasoning = '';
-      let hasReceivedAnyChunk = false;
       let finalMetrics: ChatMetrics | null = null;
 
-      for await (const chunk of chatCompletionStream(allMessages, settings, enableReasoning)) {
-        // 收到即渲染：分开累加 reasoning_content 和 content
-        if (chunk.content || chunk.reasoning_content) {
-          hasReceivedAnyChunk = true;
-          if (chunk.reasoning_content) {
-            fullReasoning += chunk.reasoning_content;
-          }
-          if (chunk.content) {
-            fullContent += chunk.content;
-          }
-          // 同时更新 reasoning_content 和 content
+      const stream = chatCompletionStream(currentMessages, settings, enableReasoning);
+
+      for await (const chunk of stream) {
+        if (chunk.content) {
+          fullContent += chunk.content;
           updateLastMessage(fullContent, fullReasoning);
         }
-        
-        // 实时估算速度 (如果还没有最终数据)
-        if (chunk.metrics && !chunk.metrics.promptTokens) {
-           updateMetrics(chunk.metrics);
+        if (chunk.reasoning_content) {
+          fullReasoning += chunk.reasoning_content;
+          updateLastMessage(fullContent, fullReasoning);
         }
-        
-        // 捕获最终的完整 metrics (通常在最后一个 chunk)
-        if (chunk.metrics && (chunk.metrics.promptTokens || chunk.metrics.completionTokens)) {
+        if (chunk.metrics) {
+          updateMetrics(chunk.metrics);
           finalMetrics = chunk.metrics;
         }
       }
-      
-      // 【关键修复】流结束后，强制用最终准确数据刷新一次指标（传入 isFinal=true 触发累加）
+
       if (finalMetrics) {
         updateMetrics(finalMetrics, true);
 
@@ -107,26 +98,19 @@ export function useChatStream() {
           settings,
         });
       } else if (!finalMetrics && useChatStore.getState().metrics?.totalTokens === 0) {
-        // 兜底：如果完全没拿到 metrics，至少根据长度估算一下
-        const estimatedTokens = Math.ceil((fullContent.length + fullReasoning.length) / 4);
-        updateMetrics({
-          totalTokens: estimatedTokens,
-          completionTokens: estimatedTokens,
-          tokensPerSecond: useChatStore.getState().metrics?.tokensPerSecond || 0
-        }, true);
+        setError('未收到有效响应，请检查 llama-server 是否正在运行。');
       }
 
-      // 如果没有任何 chunk 但也没有报错，至少显示一个空响应
-      if (!hasReceivedAnyChunk) {
-        updateLastMessage('(无响应)', '');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '发送失败');
-      console.error(err);
+    } catch (err: any) {
+      setError(err.message || '请求失败');
     } finally {
       setLoading(false);
     }
   }, [messages, settings, addMessage, updateLastMessage, setLoading, updateMetrics, saveConversationsToStore, currentConversationId, createConversation]);
 
-  return { sendMessage, error, isSending: useChatStore(state => state.isLoading) };
+  return {
+    sendMessage,
+    error,
+    isSending,
+  };
 }
