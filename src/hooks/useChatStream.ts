@@ -37,15 +37,24 @@ export function useChatStream() {
     try {
       const allMessages = [...messages, userMessage];
       let fullContent = '';
+      let hasReceivedAnyChunk = false;
 
       for await (const chunk of chatCompletionStream(allMessages, settings)) {
-        if (chunk.content) {
-          fullContent += chunk.content;
+        // 收到即渲染：只要有内容就立即追加
+        if (chunk.content || chunk.reasoning_content) {
+          hasReceivedAnyChunk = true;
+          if (chunk.content) fullContent += chunk.content;
+          if (chunk.reasoning_content) fullContent += chunk.reasoning_content;
           updateLastMessage(fullContent);
         }
         if (chunk.metrics) {
           updateMetrics(chunk.metrics);
         }
+      }
+      
+      // 如果没有任何 chunk 但也没有报错，至少显示一个空响应
+      if (!hasReceivedAnyChunk) {
+        updateLastMessage('(无响应)');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '发送失败');

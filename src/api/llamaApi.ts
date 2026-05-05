@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://127.0.0.1:8080/v1';
 export async function* chatCompletionStream(
   messages: Message[],
   settings: ChatSettings
-): AsyncGenerator<{ content?: string; metrics?: ChatMetrics }> {
+): AsyncGenerator<{ content?: string; reasoning_content?: string; metrics?: ChatMetrics }> {
   const response = await fetch(`${API_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -39,43 +39,52 @@ export async function* chatCompletionStream(
     const { done, value } = await reader.read();
     if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
+    // 立即解码并分割，不等待累积
+    const text = decoder.decode(value, { stream: true });
+    const lines = text.split('\n');
+    
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data: ')) continue;
+      
+      const data = trimmed.slice(6);
+      if (data === '[DONE]') continue;
 
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content || '';
-          
-          const timings = parsed.timings || {};
-          
-          if (content) {
-            if (firstTokenTime === null) {
-              firstTokenTime = Date.now();
-            }
-            tokenCount++;
-            
-            const currentTime = Date.now();
-            const elapsed = (currentTime - startTime) / 1000;
-            
-            yield {
-              content,
-              metrics: {
-                ttft: firstTokenTime ? firstTokenTime - startTime : undefined,
-                tokensPerSecond: tokenCount / elapsed,
-                totalTokens: tokenCount,
-                promptTokens: timings.prompt_n,
-                completionTokens: timings.predicted_n,
-              },
-            };
+      try {
+        const parsed = JSON.parse(data);
+        const delta = parsed.choices?.[0]?.delta || {};
+        const content = delta.content || '';
+        const reasoningContent = delta.reasoning_content || '';
+        
+        const timings = parsed.timings || {};
+        
+        // 只要有内容就立即 yield（收到即渲染）
+        if (content || reasoningContent) {
+          if (firstTokenTime === null) {
+            firstTokenTime = Date.now();
           }
-        } catch (e) {
-          console.warn('Failed to parse SSE data:', e);
+          if (content) tokenCount++;
+          if (reasoningContent) tokenCount++;
+          
+          const currentTime = Date.now();
+          const elapsed = (currentTime - startTime) / 1000;
+          
+          yield {
+            content: content || undefined,
+            reasoning_content: reasoningContent || undefined,
+            metrics: {
+              ttft: firstTokenTime ? firstTokenTime - startTime : undefined,
+              tokensPerSecond: tokenCount / elapsed,
+              totalTokens: tokenCount,
+              promptTokens: timings.prompt_n,
+              completionTokens: timings.predicted_n,
+            },
+          };
+        }
+      } catch (e) {
+        // 忽略单个 chunk 解析错误，继续处理后续数据
+        if (trimmed) {
+          console.warn('Failed to parse SSE chunk:', trimmed.substring(0, 50));
         }
       }
     }
