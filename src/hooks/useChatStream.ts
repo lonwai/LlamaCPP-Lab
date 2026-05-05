@@ -16,13 +16,15 @@ export function useChatStream() {
     currentConversationId,
     createConversation,
     saveConversations: saveConversationsToStore,
-    loadConversations: loadConversationsFromStore
+    loadConversations: loadConversationsFromStore,
+    loadSettings: loadSettingsFromStore
   } = useChatStore();
 
-  // 组件挂载时加载历史对话
+  // 组件挂载时加载历史对话和设置
   useEffect(() => {
     loadConversationsFromStore();
-  }, [loadConversationsFromStore]);
+    loadSettingsFromStore();
+  }, [loadConversationsFromStore, loadSettingsFromStore]);
 
   // 每次 conversations 变化时自动保存
   useEffect(() => {

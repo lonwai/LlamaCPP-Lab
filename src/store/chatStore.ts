@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Message, Conversation, ChatSettings, ChatMetrics } from '../types';
-import { loadConversations as loadFromAPI, saveConversations as saveToAPI } from '../utils/storage';
+import { loadConversations as loadFromAPI, saveConversations as saveToAPI, loadSettings as loadSettingsFromAPI, saveSettings as saveSettingsToAPI } from '../utils/storage';
 
 interface ChatState {
   conversations: Conversation[];
@@ -15,11 +15,13 @@ interface ChatState {
   updateLastMessage: (content: string, reasoning?: string) => void;
   setLoading: (loading: boolean) => void;
   updateMetrics: (metrics: ChatMetrics, isFinal?: boolean) => void; // 新增 isFinal 标记
+  updateSettings: (settings: ChatSettings) => void;
   createConversation: () => string;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   saveConversations: () => Promise<void>;
   loadConversations: () => Promise<void>;
+  loadSettings: () => Promise<void>;
   resetAccumulatedTokens: () => void; // 新增：新建对话时重置
 }
 
@@ -81,6 +83,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setLoading: (loading) => set({ isLoading: loading }),
+
+  updateSettings: (newSettings) => {
+    set({ settings: newSettings });
+    saveSettingsToAPI(newSettings).catch(err => console.error('❌ Failed to save settings:', err));
+  },
 
   updateMetrics: (metrics, isFinal = false) => {
     set((state) => {
@@ -180,6 +187,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.log('✅ Conversations loaded successfully:', data.length, 'conversations');
     } catch (error) {
       console.error('❌ Failed to load conversations:', error);
+    }
+  },
+
+  loadSettings: async () => {
+    try {
+      const data = await loadSettingsFromAPI();
+      set({ settings: data });
+      console.log('✅ Settings loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load settings:', error);
     }
   },
 }));

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useChatStore } from './store/chatStore';
 import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
+import { MetricsChart } from './components/Metrics/MetricsChart';
 import { Header } from './components/Layout/Header';
 import { ConversationList } from './components/Chat/ConversationList';
+import { SettingsPanel } from './components/Settings/SettingsPanel';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -97,6 +99,7 @@ function MessageBubble({ msg }: { msg: Message }) {
 function App() {
   const [input, setInput] = useState('');
   const [enableReasoning, setEnableReasoning] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
   const [showMetricsPanel, setShowMetricsPanel] = useState(true);
   const { messages } = useChatStore();
@@ -145,11 +148,28 @@ function App() {
 
           <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
             <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-              <div className="mb-3">
+              {/* 参数配置折叠区 */}
+              {showSettings && (
+                <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <SettingsPanel />
+                </div>
+              )}
+              <div className="flex items-center gap-3 mb-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={enableReasoning} onChange={(e) => setEnableReasoning(e.target.checked)} className="w-4 h-4" />
-                  <span className="text-sm text-gray-600 dark:text-gray-300">🧠 开启深度思考模式</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">🧠 深度思考</span>
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(v => !v)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    showSettings
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  ⚙️ 参数
+                </button>
               </div>
               <div className="flex gap-3">
                 <input
@@ -170,9 +190,17 @@ function App() {
 
         {/* 右侧：固定指标侧边栏 */}
         <aside className={`transition-all duration-300 overflow-hidden border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 ${showMetricsPanel ? 'w-80' : 'w-0'}`}>
-          <div className="w-80 p-4 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white">📊 实时性能监控</h3>
-            <MetricsCards />
+          <div className="w-80 h-full flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white">📊 实时性能监控</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <MetricsCards />
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">📈 趋势分析</h4>
+                <MetricsChart />
+              </div>
+            </div>
           </div>
         </aside>
       </div>
