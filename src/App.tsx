@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useChatStore } from '../store/chatStore';
-import { useChatStream } from '../hooks/useChatStream';
+import { useChatStore } from './store/chatStore';
+import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
 import { Header } from './components/Layout/Header';
 import './App.css';
