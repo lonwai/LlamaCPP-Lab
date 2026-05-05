@@ -8,6 +8,90 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import './App.css';
+import type { Message } from './types';
+
+// 消息气泡组件 - 提取到顶层以避免 Hooks 规则违规
+function MessageBubble({ msg }: { msg: Message }) {
+  const [isReasoningCollapsed, setIsReasoningCollapsed] = useState(true);
+  const hasReasoning = msg.reasoning_content && msg.reasoning_content.length > 0;
+  const hasContent = msg.content && msg.content.length > 0;
+
+  return (
+    <div className="space-y-3">
+      {/* 用户消息 */}
+      {msg.role === 'user' && (
+        <div className="flex justify-end">
+          <div className="max-w-[85%] bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm shadow-md">
+            <p className="whitespace-pre-wrap">{msg.content}</p>
+          </div>
+        </div>
+      )}
+
+      {/* AI 消息 */}
+      {msg.role === 'assistant' && (
+        <div className="flex justify-start">
+          <div className="max-w-[90%] space-y-3">
+            {/* 思考过程区域 */}
+            {hasReasoning && (
+              <div className={`border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden transition-all duration-300 ${
+                hasContent && isReasoningCollapsed ? 'opacity-70' : 'opacity-100'
+              }`}>
+                <button
+                  onClick={() => setIsReasoningCollapsed(!isReasoningCollapsed)}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🧠</span>
+                    <span className="font-semibold text-purple-800 dark:text-purple-200 text-sm">
+                      深度思考过程
+                    </span>
+                  </div>
+                  <span className="text-purple-600 dark:text-purple-400 text-sm">
+                    {isReasoningCollapsed ? '▶ 展开' : '▼ 收起'}
+                  </span>
+                </button>
+                
+                {!isReasoningCollapsed && (
+                  <div className="px-4 py-3 bg-white dark:bg-gray-800 border-t border-purple-100 dark:border-purple-800">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                      >
+                        {msg.reasoning_content}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 正式回答区域 */}
+            {hasContent && (
+              <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-2xl rounded-tl-sm shadow-md border border-gray-200 dark:border-gray-700">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {/* 自动收起提示 */}
+            {hasReasoning && hasContent && isReasoningCollapsed && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 italic ml-2">
+                💡 思考过程已自动收起，点击上方"展开"查看完整推理逻辑
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function App() {
   const [input, setInput] = useState('');
