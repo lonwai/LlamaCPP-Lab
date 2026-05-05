@@ -25,7 +25,7 @@ function SettingSlider({ label, value, min, max, step, onChange }: SettingSlider
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
       />
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500">
         <span>{min}</span>
         <span>{max}</span>
       </div>

@@ -144,7 +144,7 @@ function App() {
                 <MessageBubble key={msg.id} msg={msg} />
               ))
             )}
-            {isSending && <div className="text-center text-gray-500 animate-pulse">生成中...</div>}
+            {isSending && <div className="text-center text-gray-500 dark:text-gray-400 animate-pulse">生成中...</div>}
             {error && <div className="text-center text-red-500">⚠️ {error}</div>}
           </div>
 

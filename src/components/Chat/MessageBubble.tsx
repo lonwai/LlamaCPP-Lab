@@ -98,12 +98,12 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
 
             {/* 加载中状态 */}
             {!hasContent && !hasReasoning && (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                 <span className="animate-pulse">思考中</span>
                 <span className="flex gap-1">
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                 </span>
               </div>
             )}
@@ -111,7 +111,7 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
         )}
 
         {/* 时间戳 */}
-        <div className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-400'}`}>
+        <div className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
           {new Date(message.timestamp).toLocaleTimeString()}
         </div>
       </div>
