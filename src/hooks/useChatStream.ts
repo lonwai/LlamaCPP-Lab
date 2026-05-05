@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatCompletionStream } from '../api/llamaApi';
-import type { Message } from '../types';
+import type { Message, ChatMetrics } from '../types';
 
 export function useChatStream() {
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +39,7 @@ export function useChatStream() {
       let fullContent = '';
       let fullReasoning = '';
       let hasReceivedAnyChunk = false;
+      let finalMetrics: ChatMetrics | null = null;
 
       for await (const chunk of chatCompletionStream(allMessages, settings, enableReasoning)) {
         // 收到即渲染：分开累加 reasoning_content 和 content
@@ -53,11 +54,31 @@ export function useChatStream() {
           // 同时更新 reasoning_content 和 content
           updateLastMessage(fullContent, fullReasoning);
         }
-        if (chunk.metrics) {
-          updateMetrics(chunk.metrics);
+        
+        // 实时估算速度 (如果还没有最终数据)
+        if (chunk.metrics && !chunk.metrics.promptTokens) {
+           updateMetrics(chunk.metrics);
+        }
+        
+        // 捕获最终的完整 metrics (通常在最后一个 chunk)
+        if (chunk.metrics && (chunk.metrics.promptTokens || chunk.metrics.completionTokens)) {
+          finalMetrics = chunk.metrics;
         }
       }
       
+      // 【关键修复】流结束后，强制用最终准确数据刷新一次指标
+      if (finalMetrics) {
+        updateMetrics(finalMetrics);
+      } else if (!finalMetrics && useChatStore.getState().metrics?.totalTokens === 0) {
+        // 兜底：如果完全没拿到 metrics，至少根据长度估算一下
+        const estimatedTokens = Math.ceil((fullContent.length + fullReasoning.length) / 4);
+        updateMetrics({
+          totalTokens: estimatedTokens,
+          completionTokens: estimatedTokens,
+          tokensPerSecond: useChatStore.getState().metrics?.tokensPerSecond || 0
+        });
+      }
+
       // 如果没有任何 chunk 但也没有报错，至少显示一个空响应
       if (!hasReceivedAnyChunk) {
         updateLastMessage('(无响应)', '');
