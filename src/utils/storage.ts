@@ -1,4 +1,51 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+import {
+  readTextFile,
+  writeTextFile,
+  exists,
+  mkdir,
+  BaseDirectory,
+} from '@tauri-apps/plugin-fs';
+
+const DATA_DIR = BaseDirectory.AppData;
+
+async function ensureDataDir() {
+  try {
+    const dirExists = await exists('LlamaCPP-Lab', { baseDir: DATA_DIR });
+    if (!dirExists) {
+      await mkdir('LlamaCPP-Lab', { baseDir: DATA_DIR, recursive: true });
+    }
+  } catch {
+    await mkdir('LlamaCPP-Lab', { baseDir: DATA_DIR, recursive: true });
+  }
+}
+
+function dataPath(file: string) {
+  return `LlamaCPP-Lab/${file}`;
+}
+
+async function readJSON<T>(file: string, fallback: T): Promise<T> {
+  try {
+    await ensureDataDir();
+    const path = dataPath(file);
+    const fileExists = await exists(path, { baseDir: DATA_DIR });
+    if (!fileExists) return fallback;
+    const content = await readTextFile(path, { baseDir: DATA_DIR });
+    return JSON.parse(content);
+  } catch (error) {
+    console.error(`Error reading ${file}:`, error);
+    return fallback;
+  }
+}
+
+async function writeJSON<T>(file: string, data: T): Promise<void> {
+  try {
+    await ensureDataDir();
+    const path = dataPath(file);
+    await writeTextFile(path, JSON.stringify(data, null, 2), { baseDir: DATA_DIR });
+  } catch (error) {
+    console.error(`Error writing ${file}:`, error);
+  }
+}
 
 export interface ConversationData {
   id: string;
@@ -9,82 +56,35 @@ export interface ConversationData {
   updatedAt: number;
 }
 
+const DEFAULT_SETTINGS = {
+  temperature: 0.7,
+  max_tokens: 2048,
+  top_p: 0.9,
+  stop: [],
+};
+
 export async function loadConversations(): Promise<ConversationData[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/conversations`);
-    if (!response.ok) throw new Error('Failed to load conversations');
-    return await response.json();
-  } catch (error) {
-    console.error('Error loading conversations:', error);
-    return [];
-  }
+  return readJSON<ConversationData[]>('conversations.json', []);
 }
 
 export async function saveConversations(conversations: ConversationData[]): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/conversations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(conversations),
-    });
-    if (!response.ok) throw new Error('Failed to save conversations');
-    console.log('Conversations saved successfully');
-  } catch (error) {
-    console.error('Error saving conversations:', error);
-  }
+  await writeJSON('conversations.json', conversations);
 }
 
 export async function loadSettings(): Promise<any> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/settings`);
-    if (!response.ok) throw new Error('Failed to load settings');
-    return await response.json();
-  } catch (error) {
-    console.error('Error loading settings:', error);
-    return {
-      temperature: 0.7,
-      max_tokens: 2048,
-      top_p: 0.9,
-      stop: [],
-    };
-  }
+  return readJSON('settings.json', DEFAULT_SETTINGS);
 }
 
 export async function saveSettings(settings: any): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/settings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    if (!response.ok) throw new Error('Failed to save settings');
-    console.log('Settings saved successfully');
-  } catch (error) {
-    console.error('Error saving settings:', error);
-  }
+  await writeJSON('settings.json', settings);
 }
 
 export async function loadBenchmarks(): Promise<any[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/benchmarks`);
-    if (!response.ok) throw new Error('Failed to load benchmarks');
-    return await response.json();
-  } catch (error) {
-    console.error('Error loading benchmarks:', error);
-    return [];
-  }
+  return readJSON<any[]>('benchmarks.json', []);
 }
 
 export async function saveBenchmark(record: any): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/benchmarks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record),
-    });
-    if (!response.ok) throw new Error('Failed to save benchmark');
-    console.log('✅ Benchmark saved successfully');
-  } catch (error) {
-    console.error('Error saving benchmark:', error);
-  }
+  const records = await loadBenchmarks();
+  records.push(record);
+  await writeJSON('benchmarks.json', records);
 }

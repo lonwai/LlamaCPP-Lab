@@ -1,6 +1,57 @@
 import type { Message, ChatSettings, ChatMetrics } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8080/v1';
+const MODEL_BASE_URL = 'http://127.0.0.1:8080';
+
+export interface ModelStatus {
+  online: boolean;
+  loading: boolean;
+  model?: string;
+  error?: string;
+}
+
+export async function checkModelStatus(): Promise<ModelStatus> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const [healthRes, modelsRes] = await Promise.allSettled([
+      fetch(`${MODEL_BASE_URL}/health`, { signal: controller.signal }),
+      fetch(`${API_BASE_URL}/models`, { signal: controller.signal }),
+    ]);
+
+    clearTimeout(timeoutId);
+
+    if (healthRes.status === 'rejected') {
+      return { online: false, loading: false, error: '无法连接到模型服务' };
+    }
+
+    const health = healthRes.value;
+    if (!health.ok) {
+      return { online: false, loading: false, error: `服务返回错误: ${health.status}` };
+    }
+
+    const healthData = await health.json();
+
+    if (healthData.status === 'loading model' || healthData.status === 'error') {
+      return {
+        online: false,
+        loading: healthData.status === 'loading model',
+        error: healthData.status === 'error' ? healthData.error || '模型加载失败' : undefined,
+      };
+    }
+
+    let modelName: string | undefined;
+    if (modelsRes.status === 'fulfilled' && modelsRes.value.ok) {
+      const modelsData = await modelsRes.value.json();
+      modelName = modelsData.data?.[0]?.id;
+    }
+
+    return { online: true, loading: false, model: modelName };
+  } catch {
+    return { online: false, loading: false, error: '模型服务未启动' };
+  }
+}
 
 export async function* chatCompletionStream(
   messages: Message[],

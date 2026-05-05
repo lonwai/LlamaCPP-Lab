@@ -1,4 +1,5 @@
 import { useTheme } from '../../hooks/useTheme';
+import { useModelStatus } from '../../hooks/useModelStatus';
 
 interface HeaderProps {
   showConversationList: boolean;
@@ -14,6 +15,7 @@ export function Header({
   onToggleMetricsPanel,
 }: HeaderProps) {
   const { theme, setTheme, resolved } = useTheme();
+  const { status, checking, refresh } = useModelStatus();
 
   const cycleTheme = () => {
     const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
@@ -52,6 +54,30 @@ export function Header({
       <h1 className="text-xl font-bold text-gray-800 dark:text-white">🦙 LlamaCPP Lab</h1>
 
       <div className="flex items-center gap-1">
+        <button
+          onClick={refresh}
+          disabled={checking}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+            status.online
+              ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+              : status.loading
+                ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'
+                : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+          } ${checking ? 'opacity-70' : ''}`}
+          title={status.online ? `模型已就绪${status.model ? `: ${status.model}` : ''}` : status.loading ? '模型加载中...' : status.error || '模型未连接'}
+        >
+          <span className={`relative flex h-2.5 w-2.5`}>
+            <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+              status.online ? 'animate-ping bg-green-400' : status.loading ? 'animate-pulse bg-yellow-400' : ''
+            }`} />
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+              status.online ? 'bg-green-500' : status.loading ? 'bg-yellow-500' : 'bg-red-500'
+            }`} />
+          </span>
+          <span className="hidden sm:inline text-xs">
+            {status.online ? '已连接' : status.loading ? '加载中' : '未连接'}
+          </span>
+        </button>
         <button
           onClick={cycleTheme}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
