@@ -97,6 +97,8 @@ function MessageBubble({ msg }: { msg: Message }) {
 function App() {
   const [input, setInput] = useState('');
   const [enableReasoning, setEnableReasoning] = useState(false);
+  const [showConversationList, setShowConversationList] = useState(true);
+  const [showMetricsPanel, setShowMetricsPanel] = useState(true);
   const { messages } = useChatStore();
   const { sendMessage, error, isSending } = useChatStream();
 
@@ -110,11 +112,16 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
-      <Header />
+      <Header
+        showConversationList={showConversationList}
+        showMetricsPanel={showMetricsPanel}
+        onToggleConversationList={() => setShowConversationList(v => !v)}
+        onToggleMetricsPanel={() => setShowMetricsPanel(v => !v)}
+      />
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* 最左侧：会话列表侧边栏 */}
-        <div className="hidden md:flex">
+        <div className={`transition-all duration-300 overflow-hidden ${showConversationList ? 'w-64' : 'w-0'}`}>
           <ConversationList />
         </div>
 
@@ -162,8 +169,8 @@ function App() {
         </main>
 
         {/* 右侧：固定指标侧边栏 */}
-        <aside className="hidden lg:block w-80 bg-gray-50 dark:bg-gray-800/50 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
-          <div className="sticky top-0 p-4 space-y-4">
+        <aside className={`transition-all duration-300 overflow-hidden border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 ${showMetricsPanel ? 'w-80' : 'w-0'}`}>
+          <div className="w-80 p-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white">📊 实时性能监控</h3>
             <MetricsCards />
           </div>
