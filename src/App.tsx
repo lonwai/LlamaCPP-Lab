@@ -38,56 +38,9 @@ function App() {
                 <p>开始与本地模型对话吧！</p>
               </div>
             ) : (
-              messages.map((msg) => {
-                const hasReasoning = msg.reasoningContent && msg.reasoningContent.length > 0;
-                const [isExpanded, setIsExpanded] = useState(true);
-
-                return (
-                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {msg.role === 'user' ? (
-                      <div className="max-w-[85%] bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm">
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                    ) : (
-                      <div className="max-w-[90%] flex flex-col gap-2">
-                        {hasReasoning && (
-                          <div className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden">
-                            <button
-                              onClick={() => setIsExpanded(!isExpanded)}
-                              className="w-full flex items-center justify-between px-4 py-2 bg-purple-100 dark:bg-purple-900/30"
-                            >
-                              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">🧠 思考过程</span>
-                              <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                            </button>
-                            {isExpanded && (
-                              <div className="px-4 py-3 text-sm text-purple-900 dark:text-purple-100">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.reasoningContent}</ReactMarkdown>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl rounded-tl-sm">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
-                            components={{
-                              code({node, inline, className, children, ...props}: any) {
-                                return !inline ? (
-                                  <pre className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto"><code className={className} {...props}>{children}</code></pre>
-                                ) : (
-                                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{children}</code>
-                                );
-                              }
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+              messages.map((msg) => (
+                <MessageBubble key={msg.id} msg={msg} />
+              ))
             )}
             {isSending && <div className="text-center text-gray-500 animate-pulse">生成中...</div>}
             {error && <div className="text-center text-red-500">⚠️ {error}</div>}
