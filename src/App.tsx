@@ -3,6 +3,7 @@ import { useChatStore } from './store/chatStore';
 import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
 import { MetricsChart } from './components/Metrics/MetricsChart';
+import { BenchmarkPanel } from './components/Metrics/BenchmarkPanel';
 import { Header } from './components/Layout/Header';
 import { ConversationList } from './components/Chat/ConversationList';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
@@ -201,6 +202,10 @@ function App() {
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">📈 趋势分析</h4>
                 <MetricsChart />
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">🧪 基准测试记录</h4>
+                <BenchmarkPanel />
               </div>
             </div>
           </div>

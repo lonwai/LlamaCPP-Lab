@@ -63,3 +63,28 @@ export async function saveSettings(settings: any): Promise<void> {
     console.error('Error saving settings:', error);
   }
 }
+
+export async function loadBenchmarks(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/benchmarks`);
+    if (!response.ok) throw new Error('Failed to load benchmarks');
+    return await response.json();
+  } catch (error) {
+    console.error('Error loading benchmarks:', error);
+    return [];
+  }
+}
+
+export async function saveBenchmark(record: any): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/benchmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+    });
+    if (!response.ok) throw new Error('Failed to save benchmark');
+    console.log('✅ Benchmark saved successfully');
+  } catch (error) {
+    console.error('Error saving benchmark:', error);
+  }
+}

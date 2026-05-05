@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatCompletionStream } from '../api/llamaApi';
+import { saveBenchmark } from '../utils/storage';
 import type { Message, ChatMetrics } from '../types';
 
 export function useChatStream() {
@@ -94,7 +95,17 @@ export function useChatStream() {
       
       // 【关键修复】流结束后，强制用最终准确数据刷新一次指标（传入 isFinal=true 触发累加）
       if (finalMetrics) {
-        updateMetrics(finalMetrics, true); // 传入 true 标记为最终状态，触发 Token 累加
+        updateMetrics(finalMetrics, true);
+
+        const conv = useChatStore.getState().conversations.find(c => c.id === conversationId);
+        saveBenchmark({
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          conversationTitle: conv?.title || '未知对话',
+          roundIndex: conv ? conv.metrics.length : 0,
+          metrics: finalMetrics,
+          settings,
+        });
       } else if (!finalMetrics && useChatStore.getState().metrics?.totalTokens === 0) {
         // 兜底：如果完全没拿到 metrics，至少根据长度估算一下
         const estimatedTokens = Math.ceil((fullContent.length + fullReasoning.length) / 4);

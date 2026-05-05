@@ -29,3 +29,12 @@ export interface ChatSettings {
   top_p: number;
   stop: string[];
 }
+
+export interface BenchmarkRecord {
+  id: string;
+  timestamp: number;
+  conversationTitle: string;
+  roundIndex: number;
+  metrics: ChatMetrics;
+  settings: ChatSettings;
+}
