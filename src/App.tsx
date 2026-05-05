@@ -6,6 +6,7 @@ import { MetricsChart } from './components/Metrics/MetricsChart';
 import { Header } from './components/Layout/Header';
 import { ConversationList } from './components/Chat/ConversationList';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
+import { useTheme } from './hooks/useTheme';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -102,6 +103,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
   const [showMetricsPanel, setShowMetricsPanel] = useState(true);
+  useTheme();
   const { messages } = useChatStore();
   const { sendMessage, error, isSending } = useChatStream();
 
