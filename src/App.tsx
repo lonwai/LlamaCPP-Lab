@@ -3,7 +3,10 @@ import { useChatStore } from './store/chatStore';
 import { useChatStream } from './hooks/useChatStream';
 import { MetricsCards } from './components/Metrics/MetricsCards';
 import { Header } from './components/Layout/Header';
-import { MessageBubble } from './components/Chat/MessageBubble';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github-dark.css';
 import './App.css';
 
 function App() {
@@ -21,78 +24,123 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
       <Header />
-      <MetricsCards />
 
-      <main className="max-w-4xl mx-auto p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow min-h-[500px] flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* 左侧：对话区域 */}
+        <main className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-700">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-20">
-                开始与本地模型对话吧！
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                <div className="text-6xl mb-4">🦙</div>
+                <h2 className="text-xl font-semibold mb-2">LlamaCPP Lab</h2>
+                <p>开始与本地模型对话吧！</p>
               </div>
             ) : (
-              messages.map((msg, index) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  isLast={index === messages.length - 1}
-                />
-              ))
+              messages.map((msg) => {
+                const hasReasoning = msg.reasoningContent && msg.reasoningContent.length > 0;
+                const [isExpanded, setIsExpanded] = useState(true);
+
+                return (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'user' ? (
+                      <div className="max-w-[85%] bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm">
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    ) : (
+                      <div className="max-w-[90%] flex flex-col gap-2">
+                        {hasReasoning && (
+                          <div className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden">
+                            <button
+                              onClick={() => setIsExpanded(!isExpanded)}
+                              className="w-full flex items-center justify-between px-4 py-2 bg-purple-100 dark:bg-purple-900/30"
+                            >
+                              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">🧠 思考过程</span>
+                              <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                            </button>
+                            {isExpanded && (
+                              <div className="px-4 py-3 text-sm text-purple-900 dark:text-purple-100">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.reasoningContent}</ReactMarkdown>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl rounded-tl-sm">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                            components={{
+                              code({node, inline, className, children, ...props}: any) {
+                                return !inline ? (
+                                  <pre className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto"><code className={className} {...props}>{children}</code></pre>
+                                ) : (
+                                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{children}</code>
+                                );
+                              }
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
-            {isSending && !messages.some(m => m.role === 'assistant' && !m.content) && (
-              <div className="text-center text-gray-500">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="animate-pulse">思考中</span>
-                  <span className="flex gap-1">
-                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                  </span>
-                </div>
-              </div>
-            )}
-            {error && (
-              <div className="text-center text-red-500">{error}</div>
-            )}
+            {isSending && <div className="text-center text-gray-500 animate-pulse">生成中...</div>}
+            {error && <div className="text-center text-red-500">⚠️ {error}</div>}
           </div>
 
-          <form onSubmit={handleSubmit} className="border-t p-4 space-y-3">
-            {/* 思考模式开关 */}
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={enableReasoning}
-                onChange={(e) => setEnableReasoning(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                disabled={isSending}
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                🧠 开启深度思考模式（需要模型支持）
-              </span>
-            </label>
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+              <div className="mb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={enableReasoning} onChange={(e) => setEnableReasoning(e.target.checked)} className="w-4 h-4" />
+                  <span className="text-sm text-gray-600 dark:text-gray-300">🧠 开启深度思考模式</span>
+                </label>
+              </div>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="输入消息..."
+                  className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  disabled={isSending}
+                />
+                <button type="submit" disabled={isSending || !input.trim()} className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50">
+                  {isSending ? '发送中...' : '发送'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </main>
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="输入消息..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                disabled={isSending}
-              />
-              <button
-                type="submit"
-                disabled={isSending || !input.trim()}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-              >
-                发送
-              </button>
+        {/* 右侧：固定指标侧边栏 */}
+        <aside className="hidden md:block w-80 bg-gray-50 dark:bg-gray-800/50 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+          <div className="sticky top-0 p-4 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white">📊 实时性能监控</h3>
+            <MetricsCards />
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+              <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 text-sm">🚀 Phase 2 即将上线</h4>
+              <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside">
+                <li>💾 JSON 文件持久化存储</li>
+                <li>📈 Recharts 趋势图表</li>
+                <li>⚙️ 参数预设管理</li>
+                <li>📤 会话导出/导入</li>
+              </ul>
             </div>
-          </form>
-        </div>
-      </main>
+            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                💡 <strong>当前模式：</strong>Phase 1 (内存级)<br/>
+                数据刷新后清空，Phase 2 将自动保存至 JSON 文件。
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
