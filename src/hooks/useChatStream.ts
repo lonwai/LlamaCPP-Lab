@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatCompletionStream } from '../api/llamaApi';
+import { loadConversations, saveConversations } from '../utils/storage';
 import type { Message, ChatMetrics } from '../types';
 
 export function useChatStream() {
@@ -11,8 +12,29 @@ export function useChatStream() {
     updateLastMessage, 
     setLoading, 
     updateMetrics,
-    settings 
+    settings,
+    conversations,
+    currentConversationId,
+    saveConversations: saveConversationsToStore
   } = useChatStore();
+
+  // 组件挂载时加载历史对话
+  useEffect(() => {
+    async function load() {
+      const data = await loadConversations();
+      if (data.length > 0) {
+        saveConversationsToStore(data);
+      }
+    }
+    load();
+  }, [saveConversationsToStore]);
+
+  // 每次 conversations 变化时自动保存
+  useEffect(() => {
+    if (conversations.length > 0) {
+      saveConversations(conversations);
+    }
+  }, [conversations]);
 
   const sendMessage = useCallback(async (content: string, enableReasoning: boolean = false) => {
     setError(null);
@@ -89,7 +111,7 @@ export function useChatStream() {
     } finally {
       setLoading(false);
     }
-  }, [messages, settings, addMessage, updateLastMessage, setLoading, updateMetrics]);
+  }, [messages, settings, addMessage, updateLastMessage, setLoading, updateMetrics, saveConversationsToStore]);
 
   return { sendMessage, error, isSending: useChatStore(state => state.isLoading) };
 }
