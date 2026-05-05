@@ -62,8 +62,23 @@ export async function* chatCompletionStream(
         const delta = parsed.choices?.[0]?.delta || {};
         const content = delta.content || '';
         const reasoningContent = delta.reasoning_content || '';
+        const finishReason = parsed.choices?.[0]?.finish_reason;
         
         const timings = parsed.timings || {};
+        
+        // 检测到 finish_reason: stop 且有 timings，强制更新最终指标
+        if (finishReason === 'stop' && timings && (timings.prompt_n || timings.predicted_n)) {
+          yield {
+            metrics: {
+              ttft: firstTokenTime ? firstTokenTime - startTime : undefined,
+              tokensPerSecond: tokenCount / ((Date.now() - startTime) / 1000),
+              totalTokens: (timings.prompt_n || 0) + (timings.predicted_n || 0),
+              promptTokens: timings.prompt_n,
+              completionTokens: timings.predicted_n,
+            },
+          };
+          continue; // 不再继续处理此 chunk 的内容渲染
+        }
         
         // 只要有内容就立即 yield（收到即渲染）
         if (content || reasoningContent) {
