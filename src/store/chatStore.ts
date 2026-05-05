@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Message, Conversation, ChatSettings, ChatMetrics } from '../types';
+import { loadConversations as loadFromAPI, saveConversations as saveToAPI } from '../utils/storage';
 
 interface ChatState {
   conversations: Conversation[];
@@ -16,8 +17,8 @@ interface ChatState {
   updateMetrics: (metrics: ChatMetrics, isFinal?: boolean) => void; // 新增 isFinal 标记
   createConversation: () => string;
   selectConversation: (id: string) => void;
-  saveConversations: () => void;
-  loadConversations: () => void;
+  saveConversations: () => Promise<void>;
+  loadConversations: () => Promise<void>;
   resetAccumulatedTokens: () => void; // 新增：新建对话时重置
 }
 
@@ -40,7 +41,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   addMessage: (message) => {
     set((state) => {
       const newMessages = [...state.messages, message];
-      return { messages: newMessages };
+      
+      // 如果当前有对话，则更新该对话的 messages
+      const updatedConversations = state.currentConversationId
+        ? state.conversations.map(conv =>
+            conv.id === state.currentConversationId
+              ? { ...conv, messages: newMessages, updatedAt: Date.now() }
+              : conv
+          )
+        : state.conversations;
+      
+      return { messages: newMessages, conversations: updatedConversations };
     });
   },
 
@@ -54,7 +65,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
           reasoning_content: reasoning,
         };
       }
-      return { messages };
+      
+      // 如果当前有对话，则更新该对话的 messages
+      const updatedConversations = state.currentConversationId
+        ? state.conversations.map(conv =>
+            conv.id === state.currentConversationId
+              ? { ...conv, messages, updatedAt: Date.now() }
+              : conv
+          )
+        : state.conversations;
+      
+      return { messages, conversations: updatedConversations };
     });
   },
 
@@ -66,11 +87,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (isFinal && (metrics.promptTokens || metrics.completionTokens)) {
         const currentTotal = metrics.promptTokens || 0; // prompt_n 通常已包含历史上下文
         const newGenerated = metrics.completionTokens || 0;
-        // 直接采用后端返回的完整上下文长度作为当前值（因为 prompt_n 随对话轮次增加）
-        // 或者如果需要严格累加生成量：accumulated + newGenerated
+        
+        // 如果当前有对话，则更新该对话的 metrics
+        const updatedConversations = state.currentConversationId
+          ? state.conversations.map(conv =>
+              conv.id === state.currentConversationId
+                ? { 
+                    ...conv, 
+                    metrics: [...conv.metrics, metrics],
+                    updatedAt: Date.now() 
+                  }
+                : conv
+            )
+          : state.conversations;
+        
         return { 
           metrics, 
-          accumulatedTokens: currentTotal + newGenerated 
+          accumulatedTokens: currentTotal + newGenerated,
+          conversations: updatedConversations
         };
       }
       // 非最终状态只更新实时 metrics，不改变累加器
@@ -111,11 +145,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  saveConversations: () => {
-    console.log('Saving conversations to JSON...');
+  saveConversations: async () => {
+    const { conversations } = get();
+    try {
+      await saveToAPI(conversations);
+      console.log('✅ Conversations saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to save conversations:', error);
+    }
   },
 
-  loadConversations: () => {
-    console.log('Loading conversations from JSON...');
+  loadConversations: async () => {
+    try {
+      const data = await loadFromAPI();
+      set({ conversations: data });
+      console.log('✅ Conversations loaded successfully:', data.length, 'conversations');
+    } catch (error) {
+      console.error('❌ Failed to load conversations:', error);
+    }
   },
 }));

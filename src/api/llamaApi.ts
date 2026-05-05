@@ -37,7 +37,6 @@ export async function* chatCompletionStream(
   if (!reader) throw new Error('No response body');
 
   const decoder = new TextDecoder();
-  let buffer = '';
   let firstTokenTime: number | null = null;
   let tokenCount = 0;
   let startTime = Date.now();

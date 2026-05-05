@@ -63,7 +63,7 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
   const hasContent = message.content && message.content.trim().length > 0;
 
   // 判断思考是否已完成（有正式回答或消息不是最后一条）
-  const isReasoningCompleted = !isLast || (hasContent && hasReasoning);
+  const isReasoningCompleted: boolean = !isLast || Boolean(hasContent && hasReasoning);
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>

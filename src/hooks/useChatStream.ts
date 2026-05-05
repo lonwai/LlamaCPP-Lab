@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatCompletionStream } from '../api/llamaApi';
-import { loadConversations, saveConversations } from '../utils/storage';
 import type { Message, ChatMetrics } from '../types';
 
 export function useChatStream() {
@@ -15,30 +14,33 @@ export function useChatStream() {
     settings,
     conversations,
     currentConversationId,
-    saveConversations: saveConversationsToStore
+    createConversation,
+    saveConversations: saveConversationsToStore,
+    loadConversations: loadConversationsFromStore
   } = useChatStore();
 
   // 组件挂载时加载历史对话
   useEffect(() => {
-    async function load() {
-      const data = await loadConversations();
-      if (data.length > 0) {
-        saveConversationsToStore(data);
-      }
-    }
-    load();
-  }, [saveConversationsToStore]);
+    loadConversationsFromStore();
+  }, [loadConversationsFromStore]);
 
   // 每次 conversations 变化时自动保存
   useEffect(() => {
     if (conversations.length > 0) {
-      saveConversations(conversations);
+      saveConversationsToStore();
     }
-  }, [conversations]);
+  }, [conversations, saveConversationsToStore]);
 
   const sendMessage = useCallback(async (content: string, enableReasoning: boolean = false) => {
     setError(null);
     setLoading(true);
+
+    // 如果没有当前对话，则创建一个新对话
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = createConversation();
+      console.log('🆕 Created new conversation:', conversationId);
+    }
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -111,7 +113,7 @@ export function useChatStream() {
     } finally {
       setLoading(false);
     }
-  }, [messages, settings, addMessage, updateLastMessage, setLoading, updateMetrics, saveConversationsToStore]);
+  }, [messages, settings, addMessage, updateLastMessage, setLoading, updateMetrics, saveConversationsToStore, currentConversationId, createConversation]);
 
   return { sendMessage, error, isSending: useChatStore(state => state.isLoading) };
 }
